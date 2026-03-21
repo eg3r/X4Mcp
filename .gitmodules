@@ -1,0 +1,3 @@
+[submodule "X4Native"]
+	path = X4Native
+	url = https://github.com/eg3r/X4Native

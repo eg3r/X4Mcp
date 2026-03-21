@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<content version="900" id="x4mcp" name="X4MCP"
+         description="MCP server for remote game control"
+         author="eg3r" date="2026-03-21" save="0" enabled="1">
+  <dependency id="x4native" optional="false" />
+  <text language="44" description="MCP server for remote game control" name="X4MCP"/>
+</content>

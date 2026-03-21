@@ -1,0 +1,6 @@
+{
+    "name": "x4mcp",
+    "library": "native/x4native_x4mcp.dll",
+    "priority": 100,
+    "min_api_version": 1
+}

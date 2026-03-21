@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}" -replace '^v', ''
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (RelWithDebInfo)
+        run: cmake --build build --config RelWithDebInfo
+
+      - name: Package release zip
+        shell: pwsh
+        run: |
+          $staging = "pkg/x4mcp"
+          New-Item -ItemType Directory -Path $staging/native -Force | Out-Null
+          New-Item -ItemType Directory -Path $staging/ui -Force | Out-Null
+
+          Copy-Item extension/content.xml $staging/
+          Copy-Item extension/x4native.json $staging/
+          Copy-Item extension/x4mcp_config.json $staging/
+          Copy-Item extension/ui.xml $staging/
+          Copy-Item extension/ui/x4mcp.lua $staging/ui/
+          Copy-Item native/x4native_x4mcp.dll $staging/native/
+
+          Compress-Archive -Path $staging -DestinationPath "pkg/x4mcp-v${{ steps.version.outputs.version }}.zip"
+
+      - name: Package symbols zip
+        shell: pwsh
+        run: |
+          $staging = "pkg/x4mcp-symbols"
+          New-Item -ItemType Directory -Path $staging -Force | Out-Null
+
+          Copy-Item native/x4native_x4mcp.pdb $staging/
+
+          Compress-Archive -Path $staging -DestinationPath "pkg/x4mcp-symbols-v${{ steps.version.outputs.version }}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            pkg/x4mcp-v${{ steps.version.outputs.version }}.zip
+            pkg/x4mcp-symbols-v${{ steps.version.outputs.version }}.zip
