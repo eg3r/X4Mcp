@@ -45,13 +45,7 @@ void GameCommandQueue::process_pending() {
 
         switch (cmd.type) {
         case CommandType::IsGameLoaded: {
-            auto* game = x4n::game();
-            bool loaded = false;
-            if (game && game->GetPlayerID) {
-                auto pid = game->GetPlayerID();
-                loaded = (pid != 0);
-            }
-            cmd.result->set_value(loaded ? "true" : "false");
+            cmd.result->set_value(game_started_ ? "true" : "false");
             break;
         }
 

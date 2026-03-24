@@ -51,7 +51,11 @@ public:
     // Called from UI thread when Lua reports a result via event bridge.
     void on_lua_result(const std::string& event_name, const std::string& result);
 
+    // Set by main.cpp when on_game_started fires (world fully ready).
+    void set_game_started(bool started) { game_started_ = started; }
+
 private:
+    bool game_started_ = false;
     std::mutex queue_mutex_;
     std::queue<GameCommand> queue_;
 

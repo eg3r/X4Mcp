@@ -5,7 +5,7 @@
 // Loads an MCP (Model Context Protocol) server inside the X4 game process.
 // External tools (Claude Code, etc.) can connect and control the game:
 //   - Load savegames
-//   - Check if game is loaded
+//   - Check if game is started
 //   - Shut down the game
 //   - Execute chat/debug commands
 // ---------------------------------------------------------------------------
@@ -22,19 +22,19 @@ static x4mcp::GameCommandQueue g_commands;
 static std::unique_ptr<x4mcp::McpServer> g_server;
 static x4mcp::Config g_config;
 static std::string g_extension_path;
-static bool g_game_loaded = false;
+static bool g_game_started = false;
 
-static constexpr const char* STASH_GAME_LOADED = "game_loaded";
+static constexpr const char* STASH_GAME_STARTED = "game_started";
 
-static void persist_game_loaded(bool loaded) {
-    g_game_loaded = loaded;
-    x4n::stash::set(STASH_GAME_LOADED, uint8_t(loaded ? 1 : 0));
+static void persist_game_started(bool loaded) {
+    g_game_started = loaded;
+    x4n::stash::set(STASH_GAME_STARTED, uint8_t(loaded ? 1 : 0));
 }
 
-static bool restore_game_loaded() {
+static bool restore_game_started() {
     uint8_t v = 0;
-    if (x4n::stash::get(STASH_GAME_LOADED, &v) && v) {
-        g_game_loaded = true;
+    if (x4n::stash::get(STASH_GAME_STARTED, &v) && v) {
+        g_game_started = true;
         return true;
     }
     return false;
@@ -73,17 +73,30 @@ static void on_list_saves_result(const char* param) {
 // ---------------------------------------------------------------------------
 // Frame update — process queued commands on the UI thread
 // ---------------------------------------------------------------------------
+static int g_frame_counter = 0;
+
 static void on_frame_update() {
+    // Check game state every ~60 frames
+    if (g_game_started && ++g_frame_counter >= 60) {
+        g_frame_counter = 0;
+        auto* game = x4n::game();
+        if (!game || !game->GetPlayerID || game->GetPlayerID() == 0) {
+            persist_game_started(false);
+            g_commands.set_game_started(false);
+            x4n::log::info("Player left game — game_started reset");
+        }
+    }
     g_commands.process_pending();
 }
 
 // ---------------------------------------------------------------------------
-// Game loaded — start MCP server
+// Game started — world fully ready, all gamestart MD cues done
 // ---------------------------------------------------------------------------
-static void on_game_loaded() {
-    if (g_game_loaded) return;
-    persist_game_loaded(true);
-    x4n::log::info("Game loaded — MCP server already running");
+static void on_game_started() {
+    if (g_game_started) return;
+    persist_game_started(true);
+    g_commands.set_game_started(true);
+    x4n::log::info("Game started — MCP server already running");
 }
 
 // ---------------------------------------------------------------------------
@@ -96,8 +109,18 @@ X4N_EXTENSION {
     g_extension_path = x4n::path();
     g_config = x4mcp::Config::load(g_extension_path.c_str());
 
-    // Restore game_loaded flag from stash (survives /reloadui)
-    restore_game_loaded();
+    // Restore game_started flag from stash (survives /reloadui).
+    // Stash remembers the event fired, but we may have returned to the main
+    // menu since then. Validate with GetPlayerID before trusting it.
+    if (restore_game_started()) {
+        auto* game = x4n::game();
+        if (game && game->GetPlayerID && game->GetPlayerID() != 0) {
+            g_commands.set_game_started(true);
+        } else {
+            // Stash was stale — player left the game
+            persist_game_started(false);
+        }
+    }
 
     // Start MCP server immediately so clients can connect at the main menu
     g_server = std::make_unique<x4mcp::McpServer>(g_commands, g_config.port, g_config.bind_address);
@@ -116,7 +139,7 @@ X4N_EXTENSION {
     x4n::on("x4mcp_list_saves_result",    on_list_saves_result);
 
     // Lifecycle events
-    x4n::on("on_game_loaded",  on_game_loaded);
+    x4n::on("on_game_started", on_game_started);
     x4n::on("on_frame_update", on_frame_update);
 }
 
