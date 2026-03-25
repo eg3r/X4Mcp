@@ -90,7 +90,7 @@ static void on_frame_update() {
 }
 
 // ---------------------------------------------------------------------------
-// Game started — world fully ready, all gamestart MD cues done
+// Universe ready — world fully constructed (all stations built, both new game and save load)
 // ---------------------------------------------------------------------------
 static void on_game_started() {
     if (g_game_started) return;
@@ -139,7 +139,7 @@ X4N_EXTENSION {
     x4n::on("x4mcp_list_saves_result",    on_list_saves_result);
 
     // Lifecycle events
-    x4n::on("on_game_started", on_game_started);
+    x4n::on("on_universe_ready", on_game_started);
     x4n::on("on_frame_update", on_frame_update);
 }
 
