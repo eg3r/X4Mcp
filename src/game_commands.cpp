@@ -124,9 +124,9 @@ void GameCommandQueue::process_pending() {
                 else if (level == "error") log_level = X4NATIVE_LOG_ERROR;
 
                 if (filename.empty()) {
-                    x4n::log::detail::write(log_level, message.c_str());
+                    x4n::log::detail::write_ext(log_level, message);
                 } else {
-                    x4n::log::detail::write_named(log_level, message.c_str(), filename.c_str());
+                    x4n::log::detail::write_named(log_level, filename.c_str(), message);
                 }
                 cmd.result->set_value("ok");
             } catch (...) {
