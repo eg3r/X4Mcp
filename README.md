@@ -3,7 +3,6 @@
 ![C++23](https://img.shields.io/badge/C%2B%2B-23-blue?style=flat-square&logo=cplusplus)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey?style=flat-square&logo=windows)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![CI](https://github.com/eg3r/X4MCP/actions/workflows/ci.yml/badge.svg)
 ![Release](https://github.com/eg3r/X4MCP/actions/workflows/release.yml/badge.svg)
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for **X4: Foundations** — lets AI assistants and external tools control a running game instance over HTTP.
@@ -34,7 +33,7 @@ Edit `x4mcp_config.json` in the extension folder to change the server bind addre
 {
   "port": 7779,
   "bind_address": "127.0.0.1"
-}
+} 
 ```
 
 ---
