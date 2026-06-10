@@ -6,6 +6,8 @@
 #include <chrono>
 #include <nlohmann/json.hpp>
 
+#include "screenshot.h"
+
 using json = nlohmann::json;
 
 namespace x4mcp {
@@ -132,6 +134,15 @@ void GameCommandQueue::process_pending() {
             } catch (...) {
                 cmd.result->set_value("error:invalid JSON param");
             }
+            break;
+        }
+
+        case CommandType::CaptureScreenshot: {
+            // DEV/LLM-TESTING: arm X4's native single-shot screenshot. Runs on
+            // the UI thread (required: allocates + creates the output dir via
+            // the game VFS). The render thread writes the file asynchronously;
+            // the HTTP handler then locates it.
+            cmd.result->set_value(arm_native_screenshot());
             break;
         }
         }

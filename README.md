@@ -53,6 +53,7 @@ Once connected, MCP clients can call the following tools:
 | `stash_set` | Store a persistent key-value pair (X4Native stash)|
 | `stash_delete` | Delete a persistent key-value pair (X4Native stash)|
 | `log` | Write a log message with configurable level and filename |
+| `capture_screenshot` | Capture the running game via X4's native engine screenshot and return the absolute path of the written PNG. Brings the game window to the foreground so the scene renders (works in fullscreen) and flattens X4's circular alpha vignette to an opaque image — read the returned path to view the rendered frame |
 
 ---
 

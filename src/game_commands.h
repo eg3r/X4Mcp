@@ -30,6 +30,7 @@ enum class CommandType {
     StashSet,
     StashDelete,
     Log,
+    CaptureScreenshot,
 };
 
 struct GameCommand {

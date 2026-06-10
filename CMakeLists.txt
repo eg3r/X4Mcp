@@ -68,6 +68,7 @@ add_library(x4native_x4mcp SHARED
     src/mcp_server.cpp
     src/game_commands.cpp
     src/config.cpp
+    src/screenshot.cpp
 )
 
 target_include_directories(x4native_x4mcp PRIVATE
@@ -78,6 +79,12 @@ target_include_directories(x4native_x4mcp PRIVATE
 target_link_libraries(x4native_x4mcp PRIVATE
     httplib::httplib
     nlohmann_json::nlohmann_json
+    # capture_screenshot tool: resolve the X4 screenshots dir via the shell
+    # known-folder API (SHGetKnownFolderPath + CoTaskMemFree); flatten the
+    # capture's alpha vignette to an opaque PNG via WIC (windowscodecs).
+    shell32
+    ole32
+    windowscodecs
 )
 
 target_compile_definitions(x4native_x4mcp PRIVATE NOMINMAX)

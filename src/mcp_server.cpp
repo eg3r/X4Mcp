@@ -7,6 +7,11 @@
 #include <nlohmann/json.hpp>
 #include <x4native.h>
 
+#include "screenshot.h"
+
+#include <chrono>
+#include <thread>
+
 using json = nlohmann::json;
 
 namespace x4mcp {
@@ -135,6 +140,14 @@ static json make_tools_list() {
                     }},
                 }},
                 {"required", json::array({"message"})},
+            }},
+        },
+        {
+            {"name", "capture_screenshot"},
+            {"description", "DEV/LLM-TESTING: take a screenshot using X4's native capture and return the absolute path of the written PNG (read the file to view the rendered UI, including the on-screen interface). Works in fullscreen. Requires the game to be running."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", json::object()},
             }},
         },
     });
@@ -271,6 +284,41 @@ static json handle_tools_call(const json& id, const json& params,
         };
         auto result = commands.execute(CommandType::Log, param.dump());
         return make_response(id, make_tool_result(result));
+    }
+
+    if (tool_name == "capture_screenshot") {
+        // Arm X4's native screenshot on the UI thread (via the command queue),
+        // then locate the file the render thread writes asynchronously. The
+        // engine names it screen_<datetime>.<ext> under the user screenshots
+        // dir; we return the newest one written at/after the arm time.
+        //
+        // X4 does not render the 3D scene while backgrounded/focus-paused, so
+        // bring the window forward and let it render a few frames first —
+        // otherwise the capture is blank (UI overlay on a white backbuffer).
+        foreground_game_window();
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        uint64_t t0 = now_filetime();
+        auto arm_result = commands.execute(CommandType::CaptureScreenshot);
+        if (arm_result != "ok") {
+            return make_response(id, make_tool_result("error: " + arm_result, true));
+        }
+        std::string out_path, find_err;
+        for (int i = 0; i < 60; ++i) {  // poll up to ~6s for the async (non-empty) write
+            if (find_screenshot_after(t0, out_path, find_err)) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (out_path.empty()) {
+            return make_response(id, make_tool_result(
+                "error: screenshot armed but no file appeared (" + find_err + ")", true));
+        }
+        // X4 bakes a circular cockpit/UI vignette into the capture's alpha
+        // channel. Flatten to an opaque 24-bit PNG so the result matches a
+        // normal screenshot. Non-fatal: keep the raw file if this fails.
+        std::string flat_err;
+        if (!flatten_png_alpha(out_path, flat_err)) {
+            x4n::log::info("capture_screenshot: alpha-flatten skipped (raw capture returned)");
+        }
+        return make_response(id, make_tool_result(out_path));
     }
 
     return make_error(id, -32602, "Unknown tool: " + tool_name);
